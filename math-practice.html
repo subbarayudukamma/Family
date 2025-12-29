@@ -343,6 +343,7 @@
             wrongQuestions: [],
             startTime: null,
             questionStartTime: null,
+            cumulativeAnswerTime: 0, // Total time actually spent answering questions
             isAnswering: true
         };
 
@@ -441,6 +442,7 @@
                 wrongQuestions: [],
                 startTime: null,
                 questionStartTime: null,
+                cumulativeAnswerTime: 0,
                 isAnswering: true
             };
             clearInput();
@@ -515,6 +517,10 @@
                 return; // Don't process empty answers
             }
 
+            // Record time spent on this question before stopping the timer
+            const questionTime = (Date.now() - gameState.questionStartTime) / 1000;
+            gameState.cumulativeAnswerTime += questionTime;
+            
             gameState.isAnswering = false;
             gameState.totalProblems++;
 
@@ -591,7 +597,7 @@
         // Show results
         function showResults() {
             const totalTime = (Date.now() - gameState.startTime) / 1000; // in seconds
-            const avgTime = gameState.totalProblems > 0 ? (totalTime / gameState.totalProblems).toFixed(1) : 0;
+            const avgTime = gameState.totalProblems > 0 ? (gameState.cumulativeAnswerTime / gameState.totalProblems).toFixed(1) : 0;
 
             const statsHTML = `
                 <div class="stat-row">
