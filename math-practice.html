@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Math Practice - Learn Multiplication & Division</title>
+    <title>Math Strong - Get better at basic math.</title>
     <style>
         * {
             margin: 0;
@@ -194,9 +194,27 @@
             text-align: center;
             padding: 20px;
             border-radius: 10px;
-            margin-bottom: 20px;
             font-size: 1.5em;
             font-weight: bold;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            max-width: 80%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -60%);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+            }
         }
 
         .feedback.correct {
@@ -262,9 +280,15 @@
     <div class="container">
         <!-- Home Screen -->
         <div id="homeScreen" class="screen active">
-            <h1>🎓 Math Practice</h1>
-            <h2>What would you like to practice?</h2>
+            <h1>🎓 Math Strong</h1>
+            <h2>What would you like to get better at?</h2>
             <div class="button-group">
+                <button class="btn btn-primary" onclick="selectMode('addition')">
+                    ➕ Addition
+                </button>
+                <button class="btn btn-primary" onclick="selectMode('subtraction')">
+                    ➖ Subtraction
+                </button>
                 <button class="btn btn-primary" onclick="selectMode('multiplication')">
                     ✖️ Multiplication
                 </button>
@@ -272,11 +296,17 @@
                     ➗ Division
                 </button>
             </div>
+            <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
+                <label style="display: flex; align-items: center; font-size: 1.1em; cursor: pointer;">
+                    <input type="checkbox" id="negativeCheckbox" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;">
+                    <span>Include negative numbers</span>
+                </label>
+            </div>
         </div>
 
         <!-- Table Selection Screen -->
         <div id="tableScreen" class="screen">
-            <h1>Choose a Table</h1>
+            <h1 id="tableTitle">Choose a Table</h1>
             <h2 id="tablePrompt">Select a multiplication table (0-12)</h2>
             <div class="table-selector" id="tableSelector"></div>
             <div class="button-group" style="margin-top: 20px;">
@@ -286,10 +316,10 @@
             </div>
         </div>
 
+
         <!-- Practice Screen -->
         <div id="practiceScreen" class="screen">
             <div class="question-display" id="questionDisplay"></div>
-            <div id="feedbackArea"></div>
             <input type="text" id="answerInput" class="answer-input" readonly placeholder="Use keypad or keyboard">
             <div class="keypad">
                 <button class="key" onclick="inputDigit('1')">1</button>
@@ -301,7 +331,7 @@
                 <button class="key" onclick="inputDigit('7')">7</button>
                 <button class="key" onclick="inputDigit('8')">8</button>
                 <button class="key" onclick="inputDigit('9')">9</button>
-                <button class="key" onclick="clearInput()">Clear</button>
+                <button class="key" onclick="toggleNegative()">+/-</button>
                 <button class="key" onclick="inputDigit('0')">0</button>
                 <button class="key" onclick="backspace()">←</button>
             </div>
@@ -333,8 +363,10 @@
     <script>
         // Game state
         let gameState = {
-            mode: null, // 'multiplication' or 'division'
+            mode: null, // 'multiplication', 'division', 'addition', or 'subtraction'
             table: null,
+            range: null, // For addition/subtraction: { min, max }
+            includeNegatives: false,
             currentQuestion: null,
             previousQuestion: null,
             totalProblems: 0,
@@ -356,6 +388,8 @@
         // Create table selector buttons
         function createTableSelector() {
             const selector = document.getElementById('tableSelector');
+            selector.innerHTML = ''; // Clear previous content
+            selector.style.gridTemplateColumns = 'repeat(4, 1fr)'; // Ensure 4 columns
             for (let i = 0; i <= 12; i++) {
                 const btn = document.createElement('button');
                 btn.className = 'table-btn';
@@ -380,6 +414,9 @@
                     } else if (e.key === 'Backspace') {
                         e.preventDefault();
                         backspace();
+                    } else if (e.key === '-' || e.key === '_') {
+                        e.preventDefault();
+                        toggleNegative();
                     }
                 }
             });
@@ -406,14 +443,48 @@
             }
         }
 
+        // Create range selector for addition/subtraction
+        function createRangeSelector() {
+            const selector = document.getElementById('tableSelector');
+            selector.innerHTML = '';
+            const ranges = [
+                { label: '0 - 10', min: 0, max: 10 },
+                { label: '10 - 100', min: 10, max: 100 },
+                { label: '100+', min: 100, max: 999 }
+            ];
+            ranges.forEach((range, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'table-btn';
+                btn.style.gridColumn = 'span 1';
+                btn.textContent = range.label;
+                btn.onclick = () => selectRange(range);
+                selector.appendChild(btn);
+            });
+        }
+
         // Mode selection
         function selectMode(mode) {
             gameState.mode = mode;
+            gameState.includeNegatives = document.getElementById('negativeCheckbox').checked;
             const prompt = document.getElementById('tablePrompt');
+            const title = document.getElementById('tableTitle');
+            
             if (mode === 'multiplication') {
+                title.textContent = 'Choose a Table';
                 prompt.textContent = 'Select a multiplication table (0-12)';
-            } else {
+                createTableSelector();
+            } else if (mode === 'division') {
+                title.textContent = 'Choose a Table';
                 prompt.textContent = 'Select a division table (0-12)';
+                createTableSelector();
+            } else if (mode === 'addition') {
+                title.textContent = 'Choose a Difficulty';
+                prompt.textContent = 'Select a range for addition';
+                createRangeSelector();
+            } else if (mode === 'subtraction') {
+                title.textContent = 'Choose a Difficulty';
+                prompt.textContent = 'Select a range for subtraction';
+                createRangeSelector();
             }
             showScreen('tableScreen');
         }
@@ -429,11 +500,24 @@
             generateQuestion();
         }
 
+        // Range selection for addition/subtraction
+        function selectRange(range) {
+            gameState.range = range;
+            resetGameState();
+            gameState.range = range;
+            gameState.mode = gameState.mode;
+            gameState.startTime = Date.now();
+            showScreen('practiceScreen');
+            generateQuestion();
+        }
+
         // Reset game state
         function resetGameState() {
             gameState = {
                 mode: gameState.mode,
-                table: null,
+                table: gameState.table,
+                range: gameState.range,
+                includeNegatives: gameState.includeNegatives,
                 currentQuestion: null,
                 previousQuestion: null,
                 totalProblems: 0,
@@ -446,7 +530,15 @@
                 isAnswering: true
             };
             clearInput();
-            document.getElementById('feedbackArea').innerHTML = '';
+        }
+
+        // Apply random negatives to operands
+        function applyRandomNegatives(num1, num2) {
+            if (gameState.includeNegatives) {
+                if (Math.random() < 0.5) num1 = -num1;
+                if (Math.random() < 0.5) num2 = -num2;
+            }
+            return [num1, num2];
         }
 
         // Generate question
@@ -456,31 +548,76 @@
             
             let num1, num2, answer, questionText;
             
-            // Retry wrong questions 30% of the time if available
-            if (gameState.wrongQuestions.length > 0 && Math.random() < 0.3) {
-                const wrongQ = gameState.wrongQuestions[Math.floor(Math.random() * gameState.wrongQuestions.length)];
-                num1 = wrongQ.num1;
-                num2 = wrongQ.num2;
-            } else {
-                num2 = Math.floor(Math.random() * 13); // 0-12
-                num1 = gameState.table;
-            }
+            if (gameState.mode === 'multiplication' || gameState.mode === 'division') {
+                // Retry wrong questions 30% of the time if available
+                if (gameState.wrongQuestions.length > 0 && Math.random() < 0.3) {
+                    const wrongQ = gameState.wrongQuestions[Math.floor(Math.random() * gameState.wrongQuestions.length)];
+                    num1 = wrongQ.num1;
+                    num2 = wrongQ.num2;
+                } else {
+                    num2 = Math.floor(Math.random() * 13); // 0-12
+                    num1 = gameState.table;
+                }
 
-            // Make sure we don't repeat the same question twice in a row
-            if (gameState.previousQuestion && 
-                gameState.previousQuestion.num1 === num1 && 
-                gameState.previousQuestion.num2 === num2) {
-                // Try a different number
-                num2 = (num2 + 1) % 13;
-            }
+                // Apply negatives for multiplication/division
+                [num1, num2] = applyRandomNegatives(num1, num2);
 
-            if (gameState.mode === 'multiplication') {
-                answer = num1 * num2;
-                questionText = `${num1} × ${num2} = ?`;
-            } else {
-                answer = num1 * num2;
-                questionText = `${answer} ÷ ${num1} = ?`;
-                answer = num2;
+                // Make sure we don't repeat the same question twice in a row
+                if (gameState.previousQuestion && 
+                    gameState.previousQuestion.num1 === num1 && 
+                    gameState.previousQuestion.num2 === num2) {
+                    // Try a different number
+                    num2 = (num2 + 1) % 13;
+                    [num1, num2] = applyRandomNegatives(num1, num2);
+                }
+
+                if (gameState.mode === 'multiplication') {
+                    answer = num1 * num2;
+                    questionText = `${num1} × ${num2} = ?`;
+                } else {
+                    const product = Math.abs(num1) * Math.abs(num2);
+                    const divisor = Math.abs(num1);
+                    answer = num2;
+                    // Handle sign for division
+                    if ((num1 < 0 && num2 > 0) || (num1 > 0 && num2 < 0)) {
+                        answer = -answer;
+                    }
+                    questionText = `${product * (num1 < 0 ? -1 : 1)} ÷ ${num1} = ?`;
+                }
+            } else if (gameState.mode === 'addition' || gameState.mode === 'subtraction') {
+                // Generate numbers within the selected range
+                const { min, max } = gameState.range;
+                
+                // Retry wrong questions 30% of the time if available
+                if (gameState.wrongQuestions.length > 0 && Math.random() < 0.3) {
+                    const wrongQ = gameState.wrongQuestions[Math.floor(Math.random() * gameState.wrongQuestions.length)];
+                    num1 = wrongQ.num1;
+                    num2 = wrongQ.num2;
+                } else {
+                    num1 = Math.floor(Math.random() * (max - min + 1)) + min;
+                    num2 = Math.floor(Math.random() * (max - min + 1)) + min;
+                }
+
+                // Apply negatives for addition/subtraction
+                [num1, num2] = applyRandomNegatives(num1, num2);
+
+                // Make sure we don't repeat the same question twice in a row
+                if (gameState.previousQuestion && 
+                    gameState.previousQuestion.num1 === num1 && 
+                    gameState.previousQuestion.num2 === num2) {
+                    // Try a different number
+                    num2 = Math.floor(Math.random() * (max - min + 1)) + min;
+                    [num1, num2] = applyRandomNegatives(num1, num2);
+                }
+
+                if (gameState.mode === 'addition') {
+                    answer = num1 + num2;
+                    questionText = `${num1} + ${num2} = ?`;
+                } else {
+                    // For subtraction, answer can be negative
+                    answer = num1 - num2;
+                    questionText = `${num1} − ${num2} = ?`;
+                }
             }
 
             gameState.currentQuestion = { num1, num2, answer, questionText };
@@ -488,7 +625,6 @@
             
             document.getElementById('questionDisplay').textContent = questionText;
             clearInput();
-            document.getElementById('feedbackArea').innerHTML = '';
         }
 
         // Input handling
@@ -496,6 +632,18 @@
             if (!gameState.isAnswering) return;
             const input = document.getElementById('answerInput');
             input.value += digit;
+        }
+
+        function toggleNegative() {
+            if (!gameState.isAnswering) return;
+            const input = document.getElementById('answerInput');
+            if (input.value === '') {
+                input.value = '-';
+            } else if (input.value.startsWith('-')) {
+                input.value = input.value.substring(1);
+            } else {
+                input.value = '-' + input.value;
+            }
         }
 
         function clearInput() {
@@ -506,6 +654,18 @@
             if (!gameState.isAnswering) return;
             const input = document.getElementById('answerInput');
             input.value = input.value.slice(0, -1);
+        }
+
+        // Show feedback overlay
+        function showFeedbackOverlay(message, isCorrect) {
+            const overlay = document.createElement('div');
+            overlay.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
+            overlay.textContent = message;
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => {
+                overlay.remove();
+            }, isCorrect ? 1500 : 3000);
         }
 
         // Submit answer
@@ -524,7 +684,6 @@
             gameState.isAnswering = false;
             gameState.totalProblems++;
 
-            const feedbackArea = document.getElementById('feedbackArea');
             const correctAnswer = gameState.currentQuestion.answer;
 
             if (userAnswer === correctAnswer) {
@@ -541,7 +700,7 @@
                     '🏆 Outstanding!'
                 ];
                 const message = encouragements[Math.floor(Math.random() * encouragements.length)];
-                feedbackArea.innerHTML = `<div class="feedback correct">${message}</div>`;
+                showFeedbackOverlay(message, true);
                 
                 // Remove from wrong questions if it was there
                 gameState.wrongQuestions = gameState.wrongQuestions.filter(
@@ -562,7 +721,7 @@
                     `So close! It's ${correctAnswer}. Don't give up! 🎯`
                 ];
                 const message = encouragements[Math.floor(Math.random() * encouragements.length)];
-                feedbackArea.innerHTML = `<div class="feedback incorrect">${message}</div>`;
+                showFeedbackOverlay(message, false);
                 
                 // Add to wrong questions if not already there
                 const exists = gameState.wrongQuestions.some(
