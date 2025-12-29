@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Practice - Learn Multiplication & Division</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        h2 {
+            color: #764ba2;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 20px;
+            font-size: 1.3em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+            transform: translateY(-2px);
+        }
+
+        .table-selector {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .table-btn {
+            padding: 15px;
+            font-size: 1.2em;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .table-btn:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .question-display {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 3em;
+            font-weight: bold;
+            margin-bottom: 30px;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .answer-input {
+            width: 100%;
+            padding: 20px;
+            font-size: 2em;
+            border: 3px solid #667eea;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .keypad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .key {
+            padding: 20px;
+            font-size: 1.5em;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .key:hover {
+            background: #667eea;
+            color: white;
+            transform: scale(1.05);
+        }
+
+        .key:active {
+            transform: scale(0.95);
+        }
+
+        .key.wide {
+            grid-column: span 3;
+        }
+
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-enter {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .btn-exit {
+            background: linear-gradient(135deg, #f44336 0%, #da190b 100%);
+            color: white;
+        }
+
+        .feedback {
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .feedback.correct {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .feedback.incorrect {
+            background: #f44336;
+            color: white;
+        }
+
+        .stats {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ddd;
+            font-size: 1.2em;
+        }
+
+        .stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .stat-label {
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-value {
+            color: #333;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 2em;
+            }
+
+            .question-display {
+                font-size: 2em;
+                padding: 30px;
+            }
+
+            .answer-input {
+                font-size: 1.5em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Home Screen -->
+        <div id="homeScreen" class="screen active">
+            <h1>🎓 Math Practice</h1>
+            <h2>What would you like to practice?</h2>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="selectMode('multiplication')">
+                    ✖️ Multiplication
+                </button>
+                <button class="btn btn-primary" onclick="selectMode('division')">
+                    ➗ Division
+                </button>
+            </div>
+        </div>
+
+        <!-- Table Selection Screen -->
+        <div id="tableScreen" class="screen">
+            <h1>Choose a Table</h1>
+            <h2 id="tablePrompt">Select a multiplication table (0-12)</h2>
+            <div class="table-selector" id="tableSelector"></div>
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="goHome()">
+                    ← Back to Home
+                </button>
+            </div>
+        </div>
+
+        <!-- Practice Screen -->
+        <div id="practiceScreen" class="screen">
+            <div class="question-display" id="questionDisplay"></div>
+            <div id="feedbackArea"></div>
+            <input type="text" id="answerInput" class="answer-input" readonly placeholder="Use keypad or keyboard">
+            <div class="keypad">
+                <button class="key" onclick="inputDigit('1')">1</button>
+                <button class="key" onclick="inputDigit('2')">2</button>
+                <button class="key" onclick="inputDigit('3')">3</button>
+                <button class="key" onclick="inputDigit('4')">4</button>
+                <button class="key" onclick="inputDigit('5')">5</button>
+                <button class="key" onclick="inputDigit('6')">6</button>
+                <button class="key" onclick="inputDigit('7')">7</button>
+                <button class="key" onclick="inputDigit('8')">8</button>
+                <button class="key" onclick="inputDigit('9')">9</button>
+                <button class="key" onclick="clearInput()">Clear</button>
+                <button class="key" onclick="inputDigit('0')">0</button>
+                <button class="key" onclick="backspace()">←</button>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-enter" onclick="submitAnswer()">
+                    ✓ Enter
+                </button>
+                <button class="btn btn-exit" onclick="exitPractice()">
+                    ✕ Exit
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="resultsScreen" class="screen">
+            <h1>🎉 Session Complete!</h1>
+            <div class="stats" id="statsDisplay"></div>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="goHome()">
+                    🏠 Go to Home
+                </button>
+                <button class="btn btn-secondary" onclick="closeApp()">
+                    👋 Exit
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            mode: null, // 'multiplication' or 'division'
+            table: null,
+            currentQuestion: null,
+            previousQuestion: null,
+            totalProblems: 0,
+            correctAnswers: 0,
+            wrongAnswers: 0,
+            wrongQuestions: [],
+            startTime: null,
+            questionStartTime: null,
+            isAnswering: true
+        };
+
+        // Initialize
+        function init() {
+            createTableSelector();
+            setupKeyboardListeners();
+        }
+
+        // Create table selector buttons
+        function createTableSelector() {
+            const selector = document.getElementById('tableSelector');
+            for (let i = 0; i <= 12; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'table-btn';
+                btn.textContent = i;
+                btn.onclick = () => selectTable(i);
+                selector.appendChild(btn);
+            }
+        }
+
+        // Setup keyboard event listeners
+        function setupKeyboardListeners() {
+            document.addEventListener('keydown', (e) => {
+                if (document.getElementById('practiceScreen').classList.contains('active') && gameState.isAnswering) {
+                    if (e.key >= '0' && e.key <= '9') {
+                        inputDigit(e.key);
+                    } else if (e.key === 'Enter') {
+                        e.preventDefault();
+                        submitAnswer();
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        exitPractice();
+                    } else if (e.key === 'Backspace') {
+                        e.preventDefault();
+                        backspace();
+                    }
+                }
+            });
+        }
+
+        // Screen navigation
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function goHome() {
+            resetGameState();
+            showScreen('homeScreen');
+        }
+
+        function closeApp() {
+            if (confirm('Are you sure you want to exit?')) {
+                window.close();
+                // If window.close() doesn't work (browser restriction), show a message
+                setTimeout(() => {
+                    alert('Please close this tab/window to exit.');
+                }, 100);
+            }
+        }
+
+        // Mode selection
+        function selectMode(mode) {
+            gameState.mode = mode;
+            const prompt = document.getElementById('tablePrompt');
+            if (mode === 'multiplication') {
+                prompt.textContent = 'Select a multiplication table (0-12)';
+            } else {
+                prompt.textContent = 'Select a division table (0-12)';
+            }
+            showScreen('tableScreen');
+        }
+
+        // Table selection
+        function selectTable(table) {
+            gameState.table = table;
+            resetGameState();
+            gameState.table = table;
+            gameState.mode = gameState.mode || 'multiplication';
+            gameState.startTime = Date.now();
+            showScreen('practiceScreen');
+            generateQuestion();
+        }
+
+        // Reset game state
+        function resetGameState() {
+            gameState = {
+                mode: gameState.mode,
+                table: null,
+                currentQuestion: null,
+                previousQuestion: null,
+                totalProblems: 0,
+                correctAnswers: 0,
+                wrongAnswers: 0,
+                wrongQuestions: [],
+                startTime: null,
+                questionStartTime: null,
+                isAnswering: true
+            };
+            clearInput();
+            document.getElementById('feedbackArea').innerHTML = '';
+        }
+
+        // Generate question
+        function generateQuestion() {
+            gameState.isAnswering = true;
+            gameState.questionStartTime = Date.now();
+            
+            let num1, num2, answer, questionText;
+            
+            // Retry wrong questions 30% of the time if available
+            if (gameState.wrongQuestions.length > 0 && Math.random() < 0.3) {
+                const wrongQ = gameState.wrongQuestions[Math.floor(Math.random() * gameState.wrongQuestions.length)];
+                num1 = wrongQ.num1;
+                num2 = wrongQ.num2;
+            } else {
+                num2 = Math.floor(Math.random() * 13); // 0-12
+                num1 = gameState.table;
+            }
+
+            // Make sure we don't repeat the same question twice in a row
+            if (gameState.previousQuestion && 
+                gameState.previousQuestion.num1 === num1 && 
+                gameState.previousQuestion.num2 === num2) {
+                // Try a different number
+                num2 = (num2 + 1) % 13;
+            }
+
+            if (gameState.mode === 'multiplication') {
+                answer = num1 * num2;
+                questionText = `${num1} × ${num2} = ?`;
+            } else {
+                answer = num1 * num2;
+                questionText = `${answer} ÷ ${num1} = ?`;
+                answer = num2;
+            }
+
+            gameState.currentQuestion = { num1, num2, answer, questionText };
+            gameState.previousQuestion = { num1, num2 };
+            
+            document.getElementById('questionDisplay').textContent = questionText;
+            clearInput();
+            document.getElementById('feedbackArea').innerHTML = '';
+        }
+
+        // Input handling
+        function inputDigit(digit) {
+            if (!gameState.isAnswering) return;
+            const input = document.getElementById('answerInput');
+            input.value += digit;
+        }
+
+        function clearInput() {
+            document.getElementById('answerInput').value = '';
+        }
+
+        function backspace() {
+            if (!gameState.isAnswering) return;
+            const input = document.getElementById('answerInput');
+            input.value = input.value.slice(0, -1);
+        }
+
+        // Submit answer
+        function submitAnswer() {
+            if (!gameState.isAnswering) return;
+            
+            const userAnswer = parseInt(document.getElementById('answerInput').value);
+            if (isNaN(userAnswer)) {
+                return; // Don't process empty answers
+            }
+
+            gameState.isAnswering = false;
+            gameState.totalProblems++;
+
+            const feedbackArea = document.getElementById('feedbackArea');
+            const correctAnswer = gameState.currentQuestion.answer;
+
+            if (userAnswer === correctAnswer) {
+                // Correct answer
+                gameState.correctAnswers++;
+                const encouragements = [
+                    '🌟 Excellent!',
+                    '🎉 Perfect!',
+                    '👏 Great job!',
+                    '💯 Awesome!',
+                    '✨ Brilliant!',
+                    '🚀 You rock!',
+                    '⭐ Fantastic!',
+                    '🏆 Outstanding!'
+                ];
+                const message = encouragements[Math.floor(Math.random() * encouragements.length)];
+                feedbackArea.innerHTML = `<div class="feedback correct">${message}</div>`;
+                
+                // Remove from wrong questions if it was there
+                gameState.wrongQuestions = gameState.wrongQuestions.filter(
+                    q => !(q.num1 === gameState.currentQuestion.num1 && q.num2 === gameState.currentQuestion.num2)
+                );
+                
+                setTimeout(() => {
+                    generateQuestion();
+                }, 1500);
+            } else {
+                // Wrong answer
+                gameState.wrongAnswers++;
+                const encouragements = [
+                    `Not quite! The answer is ${correctAnswer}. Keep learning! 📚`,
+                    `Oops! It's ${correctAnswer}. You'll get it next time! 💪`,
+                    `Almost! The correct answer is ${correctAnswer}. Keep practicing! 🌈`,
+                    `Nice try! The answer is ${correctAnswer}. You're improving! 🌟`,
+                    `So close! It's ${correctAnswer}. Don't give up! 🎯`
+                ];
+                const message = encouragements[Math.floor(Math.random() * encouragements.length)];
+                feedbackArea.innerHTML = `<div class="feedback incorrect">${message}</div>`;
+                
+                // Add to wrong questions if not already there
+                const exists = gameState.wrongQuestions.some(
+                    q => q.num1 === gameState.currentQuestion.num1 && q.num2 === gameState.currentQuestion.num2
+                );
+                if (!exists) {
+                    gameState.wrongQuestions.push({
+                        num1: gameState.currentQuestion.num1,
+                        num2: gameState.currentQuestion.num2
+                    });
+                }
+                
+                setTimeout(() => {
+                    generateQuestion();
+                }, 3000);
+            }
+        }
+
+        // Exit practice
+        function exitPractice() {
+            // If there's a current answer, validate it first
+            if (gameState.isAnswering && document.getElementById('answerInput').value) {
+                submitAnswer();
+            }
+            
+            // Show results after a brief delay
+            setTimeout(() => {
+                showResults();
+            }, gameState.isAnswering ? 0 : 1000);
+        }
+
+        // Show results
+        function showResults() {
+            const totalTime = (Date.now() - gameState.startTime) / 1000; // in seconds
+            const avgTime = gameState.totalProblems > 0 ? (totalTime / gameState.totalProblems).toFixed(1) : 0;
+
+            const statsHTML = `
+                <div class="stat-row">
+                    <span class="stat-label">Total Problems:</span>
+                    <span class="stat-value">${gameState.totalProblems}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Correct Answers:</span>
+                    <span class="stat-value" style="color: #4CAF50;">${gameState.correctAnswers}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Wrong Answers:</span>
+                    <span class="stat-value" style="color: #f44336;">${gameState.wrongAnswers}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Total Time:</span>
+                    <span class="stat-value">${totalTime.toFixed(1)} seconds</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Average Time per Problem:</span>
+                    <span class="stat-value">${avgTime} seconds</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Accuracy:</span>
+                    <span class="stat-value">${gameState.totalProblems > 0 ? ((gameState.correctAnswers / gameState.totalProblems) * 100).toFixed(1) : 0}%</span>
+                </div>
+            `;
+
+            document.getElementById('statsDisplay').innerHTML = statsHTML;
+            showScreen('resultsScreen');
+        }
+
+        // Initialize on page load
+        init();
+    </script>
+</body>
+</html>
