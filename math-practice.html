@@ -362,6 +362,9 @@
     </div>
 
     <script>
+        // Constants
+        const MAX_TABLE_NUMBER = 12; // Maximum number for multiplication/division tables (0-12)
+
         // Game state
         let gameState = {
             mode: null, // 'multiplication', 'division', 'addition', or 'subtraction'
@@ -391,7 +394,7 @@
             const selector = document.getElementById('tableSelector');
             selector.innerHTML = ''; // Clear previous content
             selector.style.gridTemplateColumns = 'repeat(4, 1fr)'; // Ensure 4 columns
-            for (let i = 0; i <= 12; i++) {
+            for (let i = 0; i <= MAX_TABLE_NUMBER; i++) {
                 const btn = document.createElement('button');
                 btn.className = 'table-btn';
                 btn.textContent = i;
@@ -472,11 +475,11 @@
             
             if (mode === 'multiplication') {
                 title.textContent = 'Choose a Table';
-                prompt.textContent = 'Select a multiplication table (0-12)';
+                prompt.textContent = `Select a multiplication table (0-${MAX_TABLE_NUMBER})`;
                 createTableSelector();
             } else if (mode === 'division') {
                 title.textContent = 'Choose a Table';
-                prompt.textContent = 'Select a division table (0-12)';
+                prompt.textContent = `Select a division table (0-${MAX_TABLE_NUMBER})`;
                 createTableSelector();
             } else if (mode === 'addition') {
                 title.textContent = 'Choose a Difficulty';
@@ -556,7 +559,7 @@
                     num1 = wrongQ.num1;
                     num2 = wrongQ.num2;
                 } else {
-                    num2 = Math.floor(Math.random() * 13); // 0-12
+                    num2 = Math.floor(Math.random() * (MAX_TABLE_NUMBER + 1)); // 0-MAX_TABLE_NUMBER
                     num1 = gameState.table;
                 }
 
@@ -568,7 +571,7 @@
                     gameState.previousQuestion.num1 === num1 && 
                     gameState.previousQuestion.num2 === num2) {
                     // Try a different number
-                    num2 = (num2 + 1) % 13;
+                    num2 = (num2 + 1) % (MAX_TABLE_NUMBER + 1);
                     [num1, num2] = applyRandomNegatives(num1, num2);
                 }
 
@@ -576,6 +579,11 @@
                     answer = num1 * num2;
                     questionText = `${num1} × ${num2} = ?`;
                 } else {
+                    // Ensure divisor is never 0 - regenerate if needed
+                    if (num1 === 0) {
+                        num1 = Math.floor(Math.random() * MAX_TABLE_NUMBER) + 1; // 1-MAX_TABLE_NUMBER
+                        [num1, num2] = applyRandomNegatives(num1, num2);
+                    }
                     const product = Math.abs(num1) * Math.abs(num2);
                     const divisor = Math.abs(num1);
                     answer = num2;
@@ -710,7 +718,7 @@
                 
                 setTimeout(() => {
                     generateQuestion();
-                }, 1500);
+                }, 500);
             } else {
                 // Wrong answer
                 gameState.wrongAnswers++;
@@ -737,7 +745,7 @@
                 
                 setTimeout(() => {
                     generateQuestion();
-                }, 3000);
+                }, 2000);
             }
         }
 
