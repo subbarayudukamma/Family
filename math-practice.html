@@ -239,6 +239,11 @@
             margin-bottom: 20px;
         }
 
+        .keypad.disabled {
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
         .key {
             padding: 20px;
             font-size: 1.5em;
@@ -271,6 +276,11 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
+        }
+
+        .action-buttons.disabled {
+            pointer-events: none;
+            opacity: 0.5;
         }
 
         .btn-enter {
@@ -445,6 +455,9 @@
             <h1>🎉 Session Complete!</h1>
             <div class="stats" id="statsDisplay"></div>
             <div class="button-group">
+                <button class="btn btn-primary" onclick="retrySession()">
+                    🔄 Retry
+                </button>
                 <button class="btn btn-primary" onclick="goHome()">
                     🏠 Go to Home
                 </button>
@@ -462,7 +475,7 @@
             <div class="modal-header">About Math Strong</div>
             <div class="modal-body">
                 <p>We hope you enjoy this simple app and get better at math!</p>
-                <p><strong>Version:</strong> 1.12</p>
+                <p><strong>Version:</strong> 1.13</p>
                 <p><strong>Contact:</strong><br>
                    s.kamma@live.com</p>
             </div>
@@ -472,6 +485,8 @@
     <script>
         // Constants
         const MAX_TABLE_NUMBER = 12; // Maximum number for multiplication/division tables (0-12)
+        const FEEDBACK_DURATION_CORRECT = 300; // Duration to show correct answer feedback (ms)
+        const FEEDBACK_DURATION_INCORRECT = 1500; // Duration to show incorrect answer feedback (ms)
 
         // Game state
         let gameState = {
@@ -488,7 +503,10 @@
             startTime: null,
             questionStartTime: null,
             cumulativeAnswerTime: 0, // Total time actually spent answering questions
-            isAnswering: true
+            isAnswering: true,
+            showingFeedback: false,
+            feedbackStartTime: null,
+            totalFeedbackTime: 0 // Total time spent showing feedback messages
         };
 
         // Initialize
@@ -514,7 +532,7 @@
         // Setup keyboard event listeners
         function setupKeyboardListeners() {
             document.addEventListener('keydown', (e) => {
-                if (document.getElementById('practiceScreen').classList.contains('active') && gameState.isAnswering) {
+                if (document.getElementById('practiceScreen').classList.contains('active') && gameState.isAnswering && !gameState.showingFeedback) {
                     if (e.key >= '0' && e.key <= '9') {
                         inputDigit(e.key);
                     } else if (e.key === 'Enter') {
@@ -538,6 +556,28 @@
         function showScreen(screenId) {
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
+        }
+
+        function retrySession() {
+            // Save current session settings
+            const mode = gameState.mode;
+            const table = gameState.table;
+            const range = gameState.range;
+            const includeNegatives = gameState.includeNegatives;
+            
+            // Reset game state
+            resetGameState();
+            
+            // Restore session settings
+            gameState.mode = mode;
+            gameState.table = table;
+            gameState.range = range;
+            gameState.includeNegatives = includeNegatives;
+            gameState.startTime = Date.now();
+            
+            // Start practice
+            showScreen('practiceScreen');
+            generateQuestion();
         }
 
         function goHome() {
@@ -639,7 +679,10 @@
                 startTime: null,
                 questionStartTime: null,
                 cumulativeAnswerTime: 0,
-                isAnswering: true
+                isAnswering: true,
+                showingFeedback: false,
+                feedbackStartTime: null,
+                totalFeedbackTime: 0
             };
             clearInput();
         }
@@ -746,13 +789,13 @@
 
         // Input handling
         function inputDigit(digit) {
-            if (!gameState.isAnswering) return;
+            if (!gameState.isAnswering || gameState.showingFeedback) return;
             const input = document.getElementById('answerInput');
             input.value += digit;
         }
 
         function toggleNegative() {
-            if (!gameState.isAnswering) return;
+            if (!gameState.isAnswering || gameState.showingFeedback) return;
             const input = document.getElementById('answerInput');
             if (input.value === '') {
                 input.value = '-';
@@ -768,21 +811,41 @@
         }
 
         function backspace() {
-            if (!gameState.isAnswering) return;
+            if (!gameState.isAnswering || gameState.showingFeedback) return;
             const input = document.getElementById('answerInput');
             input.value = input.value.slice(0, -1);
         }
 
         // Show feedback overlay
         function showFeedbackOverlay(message, isCorrect) {
+            gameState.showingFeedback = true;
+            gameState.feedbackStartTime = Date.now();
+            
+            // Disable keypad and action buttons
+            const keypad = document.querySelector('.keypad');
+            const actionButtons = document.querySelector('.action-buttons');
+            if (keypad) keypad.classList.add('disabled');
+            if (actionButtons) actionButtons.classList.add('disabled');
+            
             const overlay = document.createElement('div');
             overlay.className = `feedback ${isCorrect ? 'correct' : 'incorrect'}`;
             overlay.textContent = message;
             document.body.appendChild(overlay);
             
+            const feedbackDuration = isCorrect ? FEEDBACK_DURATION_CORRECT : FEEDBACK_DURATION_INCORRECT;
+            
             setTimeout(() => {
                 overlay.remove();
-            }, isCorrect ? 1500 : 3000);
+                gameState.showingFeedback = false;
+                
+                // Add feedback display time to total
+                const actualFeedbackTime = Date.now() - gameState.feedbackStartTime;
+                gameState.totalFeedbackTime += actualFeedbackTime;
+                
+                // Re-enable keypad and action buttons
+                if (keypad) keypad.classList.remove('disabled');
+                if (actionButtons) actionButtons.classList.remove('disabled');
+            }, feedbackDuration);
         }
 
         // Submit answer
@@ -826,7 +889,7 @@
                 
                 setTimeout(() => {
                     generateQuestion();
-                }, 500);
+                }, FEEDBACK_DURATION_CORRECT);
             } else {
                 // Wrong answer
                 gameState.wrongAnswers++;
@@ -853,7 +916,7 @@
                 
                 setTimeout(() => {
                     generateQuestion();
-                }, 2000);
+                }, FEEDBACK_DURATION_INCORRECT);
             }
         }
 
@@ -872,7 +935,8 @@
 
         // Show results
         function showResults() {
-            const totalTime = (Date.now() - gameState.startTime) / 1000; // in seconds
+            const totalElapsedTime = (Date.now() - gameState.startTime) / 1000; // in seconds
+            const totalTime = totalElapsedTime - (gameState.totalFeedbackTime / 1000); // Subtract feedback display time
             const avgTime = gameState.totalProblems > 0 ? (gameState.cumulativeAnswerTime / gameState.totalProblems).toFixed(1) : 0;
 
             const statsHTML = `
