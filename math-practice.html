@@ -361,30 +361,34 @@
 
         .running-stats {
             background: #f9f9f9;
-            padding: 15px;
+            padding: 10px 15px;
             border-radius: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             display: none;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .running-stats.visible {
-            display: block;
-        }
-
-        .running-stat-row {
             display: flex;
-            justify-content: space-between;
-            padding: 5px 0;
-            font-size: 1em;
         }
 
-        .running-stat-label {
-            color: #667eea;
+        .running-stat-item {
+            font-size: 1em;
             font-weight: 600;
         }
 
-        .running-stat-value {
+        .running-stat-time {
+            color: #667eea;
+        }
+
+        .running-stat-score {
             color: #333;
+        }
+
+        .running-stat-correct {
+            color: #4CAF50;
             font-weight: bold;
         }
 
@@ -458,18 +462,10 @@
         <!-- Practice Screen -->
         <div id="practiceScreen" class="screen">
             <div class="running-stats" id="runningStats">
-                <div class="running-stat-row">
-                    <span class="running-stat-label">Time:</span>
-                    <span class="running-stat-value" id="runningTime">0.0s</span>
-                </div>
-                <div class="running-stat-row">
-                    <span class="running-stat-label">Problems:</span>
-                    <span class="running-stat-value" id="runningProblems">0</span>
-                </div>
-                <div class="running-stat-row">
-                    <span class="running-stat-label">Correct:</span>
-                    <span class="running-stat-value" id="runningCorrect" style="color: #4CAF50;">0</span>
-                </div>
+                <span class="running-stat-item running-stat-time" id="runningTime">0.0s</span>
+                <span class="running-stat-item running-stat-score">
+                    <span class="running-stat-correct" id="runningCorrect">0</span>/<span id="runningTotal">0</span>
+                </span>
             </div>
             <div class="question-display" id="questionDisplay"></div>
             <input type="text" id="answerInput" class="answer-input" readonly placeholder="Use keypad or keyboard">
@@ -522,7 +518,7 @@
             <div class="modal-header">About Math Strong</div>
             <div class="modal-body">
                 <p>We hope you enjoy this simple app and get better at math!</p>
-                <p><strong>Version:</strong> 1.14</p>
+                <p><strong>Version:</strong> 1.15</p>
                 <p><strong>Contact:</strong><br>
                    s.kamma@live.com</p>
             </div>
@@ -768,8 +764,8 @@
             
             const elapsedTime = (Date.now() - gameState.startTime - gameState.totalFeedbackTime) / 1000;
             document.getElementById('runningTime').textContent = elapsedTime.toFixed(1) + 's';
-            document.getElementById('runningProblems').textContent = gameState.totalProblems;
             document.getElementById('runningCorrect').textContent = gameState.correctAnswers;
+            document.getElementById('runningTotal').textContent = gameState.totalProblems;
         }
 
         function startRunningStats() {
