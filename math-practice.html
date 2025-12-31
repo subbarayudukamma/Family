@@ -29,6 +29,97 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             max-width: 600px;
             width: 100%;
+            position: relative;
+        }
+
+        .info-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-weight: bold;
+            z-index: 10;
+            touch-action: manipulation;
+        }
+
+        .info-icon:hover {
+            background: #764ba2;
+            transform: scale(1.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .modal-header {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .modal-body {
+            color: #333;
+            line-height: 1.8;
+        }
+
+        .modal-body p {
+            margin-bottom: 15px;
+        }
+
+        .modal-body strong {
+            color: #667eea;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 2em;
+            background: none;
+            border: none;
+            color: #999;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .modal-close:hover {
+            color: #333;
         }
 
         h1 {
@@ -282,6 +373,7 @@
     <div class="container">
         <!-- Home Screen -->
         <div id="homeScreen" class="screen active">
+            <button class="info-icon" onclick="showInfoModal()" title="Information">ⓘ</button>
             <h1>🎓 Math Strong</h1>
             <h2>Amazing, you are determined to get better!</h2>
             <h2>What do you want to practice?</h2>
@@ -359,6 +451,20 @@
                 <button class="btn btn-secondary" onclick="closeApp()">
                     👋 Exit
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeInfoModal()">×</button>
+            <div class="modal-header">About Math Strong</div>
+            <div class="modal-body">
+                <p>We hope you enjoy this simple app and get better at math!</p>
+                <p><strong>Version:</strong> 1.12</p>
+                <p><strong>Contact:</strong><br>
+                   s.kamma@live.com</p>
             </div>
         </div>
     </div>
@@ -799,6 +905,22 @@
             document.getElementById('statsDisplay').innerHTML = statsHTML;
             showScreen('resultsScreen');
         }
+
+        // Info modal functions
+        function showInfoModal() {
+            document.getElementById('infoModal').classList.add('active');
+        }
+
+        function closeInfoModal() {
+            document.getElementById('infoModal').classList.remove('active');
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('infoModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeInfoModal();
+            }
+        });
 
         // Initialize on page load
         init();
