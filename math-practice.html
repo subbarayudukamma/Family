@@ -359,6 +359,35 @@
             font-weight: bold;
         }
 
+        .running-stats {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .running-stats.visible {
+            display: block;
+        }
+
+        .running-stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 1em;
+        }
+
+        .running-stat-label {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .running-stat-value {
+            color: #333;
+            font-weight: bold;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -402,9 +431,13 @@
                 </button>
             </div>
             <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
-                <label style="display: flex; align-items: center; font-size: 1.1em; cursor: pointer;">
+                <label style="display: flex; align-items: center; font-size: 1.1em; cursor: pointer; margin-bottom: 15px;">
                     <input type="checkbox" id="negativeCheckbox" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;">
                     <span>Include negative numbers. I'm ready!</span>
+                </label>
+                <label style="display: flex; align-items: center; font-size: 1.1em; cursor: pointer;">
+                    <input type="checkbox" id="showRunningStatsCheckbox" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;">
+                    <span>Show running stats during practice</span>
                 </label>
             </div>
         </div>
@@ -424,6 +457,20 @@
 
         <!-- Practice Screen -->
         <div id="practiceScreen" class="screen">
+            <div class="running-stats" id="runningStats">
+                <div class="running-stat-row">
+                    <span class="running-stat-label">Time:</span>
+                    <span class="running-stat-value" id="runningTime">0.0s</span>
+                </div>
+                <div class="running-stat-row">
+                    <span class="running-stat-label">Problems:</span>
+                    <span class="running-stat-value" id="runningProblems">0</span>
+                </div>
+                <div class="running-stat-row">
+                    <span class="running-stat-label">Correct:</span>
+                    <span class="running-stat-value" id="runningCorrect" style="color: #4CAF50;">0</span>
+                </div>
+            </div>
             <div class="question-display" id="questionDisplay"></div>
             <input type="text" id="answerInput" class="answer-input" readonly placeholder="Use keypad or keyboard">
             <div class="keypad">
@@ -475,7 +522,7 @@
             <div class="modal-header">About Math Strong</div>
             <div class="modal-body">
                 <p>We hope you enjoy this simple app and get better at math!</p>
-                <p><strong>Version:</strong> 1.13</p>
+                <p><strong>Version:</strong> 1.14</p>
                 <p><strong>Contact:</strong><br>
                    s.kamma@live.com</p>
             </div>
@@ -485,7 +532,7 @@
     <script>
         // Constants
         const MAX_TABLE_NUMBER = 12; // Maximum number for multiplication/division tables (0-12)
-        const FEEDBACK_DURATION_CORRECT = 300; // Duration to show correct answer feedback (ms)
+        const FEEDBACK_DURATION_CORRECT = 500; // Duration to show correct answer feedback (ms)
         const FEEDBACK_DURATION_INCORRECT = 1500; // Duration to show incorrect answer feedback (ms)
 
         // Game state
@@ -506,7 +553,9 @@
             isAnswering: true,
             showingFeedback: false,
             feedbackStartTime: null,
-            totalFeedbackTime: 0 // Total time spent showing feedback messages
+            totalFeedbackTime: 0, // Total time spent showing feedback messages
+            showRunningStats: false,
+            runningStatsInterval: null
         };
 
         // Initialize
@@ -618,6 +667,7 @@
         function selectMode(mode) {
             gameState.mode = mode;
             gameState.includeNegatives = document.getElementById('negativeCheckbox').checked;
+            gameState.showRunningStats = document.getElementById('showRunningStatsCheckbox').checked;
             const prompt = document.getElementById('tablePrompt');
             const title = document.getElementById('tableTitle');
             
@@ -649,6 +699,7 @@
             gameState.mode = gameState.mode || 'multiplication';
             gameState.startTime = Date.now();
             showScreen('practiceScreen');
+            startRunningStats();
             generateQuestion();
         }
 
@@ -660,6 +711,7 @@
             gameState.mode = gameState.mode;
             gameState.startTime = Date.now();
             showScreen('practiceScreen');
+            startRunningStats();
             generateQuestion();
         }
 
@@ -682,7 +734,9 @@
                 isAnswering: true,
                 showingFeedback: false,
                 feedbackStartTime: null,
-                totalFeedbackTime: 0
+                totalFeedbackTime: 0,
+                showRunningStats: gameState.showRunningStats,
+                runningStatsInterval: null
             };
             clearInput();
         }
@@ -690,10 +744,50 @@
         // Apply random negatives to operands
         function applyRandomNegatives(num1, num2) {
             if (gameState.includeNegatives) {
-                if (Math.random() < 0.5) num1 = -num1;
-                if (Math.random() < 0.5) num2 = -num2;
+                const negativePattern = Math.random();
+                if (negativePattern < 0.33) {
+                    // First number negative
+                    num1 = -num1;
+                } else if (negativePattern < 0.66) {
+                    // Second number negative
+                    num2 = -num2;
+                } else {
+                    // Both negative (or both positive if > 0.8)
+                    
+                        num1 = -num1;
+                        num2 = -num2;
+                    }
+                
             }
             return [num1, num2];
+        }
+
+        // Running stats functions
+        function updateRunningStats() {
+            if (!gameState.showRunningStats) return;
+            
+            const elapsedTime = (Date.now() - gameState.startTime - gameState.totalFeedbackTime) / 1000;
+            document.getElementById('runningTime').textContent = elapsedTime.toFixed(1) + 's';
+            document.getElementById('runningProblems').textContent = gameState.totalProblems;
+            document.getElementById('runningCorrect').textContent = gameState.correctAnswers;
+        }
+
+        function startRunningStats() {
+            const runningStatsEl = document.getElementById('runningStats');
+            if (gameState.showRunningStats) {
+                runningStatsEl.classList.add('visible');
+                // Update every 100ms
+                gameState.runningStatsInterval = setInterval(updateRunningStats, 100);
+            } else {
+                runningStatsEl.classList.remove('visible');
+            }
+        }
+
+        function stopRunningStats() {
+            if (gameState.runningStatsInterval) {
+                clearInterval(gameState.runningStatsInterval);
+                gameState.runningStatsInterval = null;
+            }
         }
 
         // Generate question
@@ -735,14 +829,11 @@
                         num1 = Math.floor(Math.random() * MAX_TABLE_NUMBER) + 1; // 1-MAX_TABLE_NUMBER
                         [num1, num2] = applyRandomNegatives(num1, num2);
                     }
-                    const product = Math.abs(num1) * Math.abs(num2);
-                    const divisor = Math.abs(num1);
+                    const product = num1 * num2;
+                    const divisor = num1;
                     answer = num2;
-                    // Handle sign for division
-                    if ((num1 < 0 && num2 > 0) || (num1 > 0 && num2 < 0)) {
-                        answer = -answer;
-                    }
-                    questionText = `${product * (num1 < 0 ? -1 : 1)} ÷ ${num1} = ?`;
+                    
+                    questionText = `${product} ÷ ${num1} = ?`;
                 }
             } else if (gameState.mode === 'addition' || gameState.mode === 'subtraction') {
                 // Generate numbers within the selected range
@@ -882,6 +973,8 @@
                 const message = encouragements[Math.floor(Math.random() * encouragements.length)];
                 showFeedbackOverlay(message, true);
                 
+                updateRunningStats();
+                
                 // Remove from wrong questions if it was there
                 gameState.wrongQuestions = gameState.wrongQuestions.filter(
                     q => !(q.num1 === gameState.currentQuestion.num1 && q.num2 === gameState.currentQuestion.num2)
@@ -902,6 +995,8 @@
                 ];
                 const message = encouragements[Math.floor(Math.random() * encouragements.length)];
                 showFeedbackOverlay(message, false);
+                
+                updateRunningStats();
                 
                 // Add to wrong questions if not already there
                 const exists = gameState.wrongQuestions.some(
@@ -935,6 +1030,7 @@
 
         // Show results
         function showResults() {
+            stopRunningStats();
             const totalElapsedTime = (Date.now() - gameState.startTime) / 1000; // in seconds
             const totalTime = totalElapsedTime - (gameState.totalFeedbackTime / 1000); // Subtract feedback display time
             const avgTime = gameState.totalProblems > 0 ? (gameState.cumulativeAnswerTime / gameState.totalProblems).toFixed(1) : 0;
