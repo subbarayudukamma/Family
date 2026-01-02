@@ -206,6 +206,25 @@
             transform: scale(1.05);
         }
 
+        .mix-all-btn {
+            margin-top: 20px;
+            padding: 20px;
+            font-size: 1.3em;
+            border: 3px solid #764ba2;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            text-transform: uppercase;
+        }
+
+        .mix-all-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
         .question-display {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
@@ -433,6 +452,9 @@
                 <button class="btn btn-primary" onclick="selectMode('division')">
                     ➗ Division
                 </button>
+                <button class="btn btn-primary" onclick="selectMode('mixall')" style="background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%); margin-top: 10px;">
+                    🎲 Mix Everything!
+                </button>
             </div>
             <div style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 10px;">
                 <label style="display: flex; align-items: center; font-size: 1.1em; cursor: pointer; margin-bottom: 15px;">
@@ -451,6 +473,9 @@
             <h1 id="tableTitle">Choose a Table</h1>
             <h2 id="tablePrompt">Select a multiplication table (0-12)</h2>
             <div class="table-selector" id="tableSelector"></div>
+            <button class="mix-all-btn" id="mixAllBtn" onclick="selectTable('mix')">
+                🎲 Mix All Tables
+            </button>
             <div class="button-group" style="margin-top: 20px;">
                 <button class="btn btn-secondary" onclick="goHome()">
                     ← Back to Home
@@ -484,11 +509,11 @@
                 <button class="key" onclick="backspace()">←</button>
             </div>
             <div class="action-buttons">
-                <button class="btn btn-enter" onclick="submitAnswer()">
-                    ✓ Enter
-                </button>
                 <button class="btn btn-exit" onclick="exitPractice()">
                     ✕ Exit
+                </button>
+                <button class="btn btn-enter" onclick="submitAnswer()">
+                    ✓ Enter
                 </button>
             </div>
         </div>
@@ -518,7 +543,7 @@
             <div class="modal-header">About Math Strong</div>
             <div class="modal-body">
                 <p>We hope you enjoy this simple app and get better at math!</p>
-                <p><strong>Version:</strong> 1.15</p>
+                <p><strong>Version:</strong> 1.19</p>
                 <p><strong>Contact:</strong><br>
                    s.kamma@live.com</p>
             </div>
@@ -664,25 +689,42 @@
             gameState.mode = mode;
             gameState.includeNegatives = document.getElementById('negativeCheckbox').checked;
             gameState.showRunningStats = document.getElementById('showRunningStatsCheckbox').checked;
+            
+            // Mix Everything mode - skip table selection and start immediately
+            if (mode === 'mixall') {
+                resetGameState();
+                gameState.mode = 'mixall';
+                gameState.startTime = Date.now();
+                showScreen('practiceScreen');
+                startRunningStats();
+                generateQuestion();
+                return;
+            }
+            
             const prompt = document.getElementById('tablePrompt');
             const title = document.getElementById('tableTitle');
+            const mixAllBtn = document.getElementById('mixAllBtn');
             
             if (mode === 'multiplication') {
                 title.textContent = 'Choose a Table';
                 prompt.textContent = `Select a multiplication table (0-${MAX_TABLE_NUMBER})`;
                 createTableSelector();
+                mixAllBtn.style.display = 'block';
             } else if (mode === 'division') {
                 title.textContent = 'Choose a Table';
                 prompt.textContent = `Select a division table (0-${MAX_TABLE_NUMBER})`;
                 createTableSelector();
+                mixAllBtn.style.display = 'block';
             } else if (mode === 'addition') {
                 title.textContent = 'Choose a Difficulty';
                 prompt.textContent = 'Select a range for addition';
                 createRangeSelector();
+                mixAllBtn.style.display = 'none';
             } else if (mode === 'subtraction') {
                 title.textContent = 'Choose a Difficulty';
                 prompt.textContent = 'Select a range for subtraction';
                 createRangeSelector();
+                mixAllBtn.style.display = 'none';
             }
             showScreen('tableScreen');
         }
@@ -793,7 +835,47 @@
             
             let num1, num2, answer, questionText;
             
-            if (gameState.mode === 'multiplication' || gameState.mode === 'division') {
+            // Mix Everything mode - randomly choose an operation
+            if (gameState.mode === 'mixall') {
+                const operations = ['multiplication', 'division', 'addition', 'subtraction'];
+                const randomOp = operations[Math.floor(Math.random() * operations.length)];
+                
+                if (randomOp === 'multiplication' || randomOp === 'division') {
+                    // Random table multiplication/division (0-12)
+                    num1 = Math.floor(Math.random() * (MAX_TABLE_NUMBER + 1));
+                    num2 = Math.floor(Math.random() * (MAX_TABLE_NUMBER + 1));
+                    
+                    [num1, num2] = applyRandomNegatives(num1, num2);
+                    
+                    if (randomOp === 'multiplication') {
+                        answer = num1 * num2;
+                        questionText = `${num1} × ${num2} = ?`;
+                    } else {
+                        // For division, ensure divisor is not 0
+                        if (num1 === 0) {
+                            num1 = Math.floor(Math.random() * MAX_TABLE_NUMBER) + 1;
+                            [num1, num2] = applyRandomNegatives(num1, num2);
+                        }
+                        const product = num1 * num2;
+                        answer = num2;
+                        questionText = `${product} ÷ ${num1} = ?`;
+                    }
+                } else {
+                    // Random addition/subtraction (0-100)
+                    num1 = Math.floor(Math.random() * 101);
+                    num2 = Math.floor(Math.random() * 101);
+                    
+                    [num1, num2] = applyRandomNegatives(num1, num2);
+                    
+                    if (randomOp === 'addition') {
+                        answer = num1 + num2;
+                        questionText = `${num1} + ${num2} = ?`;
+                    } else {
+                        answer = num1 - num2;
+                        questionText = `${num1} − ${num2} = ?`;
+                    }
+                }
+            } else if (gameState.mode === 'multiplication' || gameState.mode === 'division') {
                 // Retry wrong questions 30% of the time if available
                 if (gameState.wrongQuestions.length > 0 && Math.random() < 0.3) {
                     const wrongQ = gameState.wrongQuestions[Math.floor(Math.random() * gameState.wrongQuestions.length)];
@@ -801,7 +883,12 @@
                     num2 = wrongQ.num2;
                 } else {
                     num2 = Math.floor(Math.random() * (MAX_TABLE_NUMBER + 1)); // 0-MAX_TABLE_NUMBER
-                    num1 = gameState.table;
+                    // If mix mode, randomly select a table number for num1
+                    if (gameState.table === 'mix') {
+                        num1 = Math.floor(Math.random() * (MAX_TABLE_NUMBER + 1)); // 0-MAX_TABLE_NUMBER
+                    } else {
+                        num1 = gameState.table;
+                    }
                 }
 
                 // Apply negatives for multiplication/division
