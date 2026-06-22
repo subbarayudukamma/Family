@@ -32,6 +32,40 @@
             position: relative;
         }
 
+        .profile-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f7f8ff;
+            border: 1px solid #dce2ff;
+            border-radius: 12px;
+            padding: 10px 14px;
+            margin-bottom: 20px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .profile-name {
+            color: #4956a8;
+            font-weight: 700;
+            font-size: 1em;
+        }
+
+        .profile-change-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.9em;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .profile-change-btn:hover {
+            background: #5568c5;
+        }
+
         .info-icon {
             position: absolute;
             top: 20px;
@@ -83,6 +117,33 @@
             width: 90%;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
             position: relative;
+        }
+
+        .name-modal-content {
+            max-width: 450px;
+        }
+
+        .name-input {
+            width: 100%;
+            padding: 14px;
+            font-size: 1.2em;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            margin: 12px 0;
+        }
+
+        .name-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .name-error {
+            min-height: 20px;
+            color: #d32f2f;
+            font-size: 0.9em;
+            font-weight: 600;
         }
 
         .modal-header {
@@ -356,6 +417,36 @@
             margin-top: 20px;
         }
 
+        .stats h3 {
+            color: #667eea;
+            margin-bottom: 12px;
+        }
+
+        .aggregate-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.95em;
+        }
+
+        .aggregate-table th,
+        .aggregate-table td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .aggregate-table th {
+            color: #667eea;
+            font-weight: 700;
+        }
+
+        .empty-stats {
+            color: #666;
+            font-style: italic;
+            padding: 8px 0;
+        }
+
         .stat-row {
             display: flex;
             justify-content: space-between;
@@ -433,11 +524,16 @@
 </head>
 <body>
     <div class="container">
-        <!-- Home Screen -->
-        <div id="homeScreen" class="screen active">
-            <button class="info-icon" onclick="showInfoModal()" title="Information">ⓘ</button>
-            <h1>🎓 Math Strong</h1>
-            <h2>Amazing, you are determined to get better!</h2>
+    <div class="profile-bar">
+        <span class="profile-name" id="profileName">Learner: Guest</span>
+        <button class="profile-change-btn" onclick="openNameModal(true)">Change Name</button>
+    </div>
+
+    <!-- Home Screen -->
+    <div id="homeScreen" class="screen active">
+        <button class="info-icon" onclick="showInfoModal()" title="Information">ⓘ</button>
+        <h1>🎓 Math Strong</h1>
+        <h2>Amazing, you are determined to get better!</h2>
             <h2>What do you want to practice?</h2>
             <div class="button-group">
                 <button class="btn btn-primary" onclick="selectMode('addition')">
@@ -465,6 +561,10 @@
                     <input type="checkbox" id="showRunningStatsCheckbox" style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;">
                     <span>Show running stats during practice</span>
                 </label>
+            </div>
+            <div class="stats">
+                <h3>📊 On-device Progress</h3>
+                <div id="persistentStats"></div>
             </div>
         </div>
 
@@ -522,6 +622,7 @@
         <div id="resultsScreen" class="screen">
             <h1>🎉 Session Complete!</h1>
             <div class="stats" id="statsDisplay"></div>
+            <div class="stats" id="dailyBreakdownDisplay"></div>
             <div class="button-group">
                 <button class="btn btn-primary" onclick="retrySession()">
                     🔄 Retry
@@ -543,9 +644,25 @@
             <div class="modal-header">About Math Strong</div>
             <div class="modal-body">
                 <p>We hope you enjoy this simple app and get better at math!</p>
-                <p><strong>Version:</strong> 1.19</p>
+                <p><strong>Version:</strong> 1.20</p>
                 <p><strong>Contact:</strong><br>
                    s.kamma@live.com</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Name Modal -->
+    <div id="nameModal" class="modal">
+        <div class="modal-content name-modal-content">
+            <div class="modal-header">Who is practicing?</div>
+            <div class="modal-body">
+                <p>Enter your name so this device can keep your progress and time by user.</p>
+                <input type="text" id="nameInput" class="name-input" maxlength="30" placeholder="Enter your name">
+                <div id="nameError" class="name-error"></div>
+                <div class="name-actions">
+                    <button id="nameCancelBtn" class="btn btn-secondary" style="padding: 10px 14px; font-size: 0.9em;" onclick="closeNameModal()">Cancel</button>
+                    <button class="btn btn-primary" style="padding: 10px 14px; font-size: 0.9em;" onclick="saveName()">Save</button>
+                </div>
             </div>
         </div>
     </div>
@@ -555,6 +672,22 @@
         const MAX_TABLE_NUMBER = 12; // Maximum number for multiplication/division tables (0-12)
         const FEEDBACK_DURATION_CORRECT = 500; // Duration to show correct answer feedback (ms)
         const FEEDBACK_DURATION_INCORRECT = 1500; // Duration to show incorrect answer feedback (ms)
+        const STORAGE_KEYS = {
+            userName: 'mathStrongUserName',
+            sessions: 'mathStrongSessions'
+        };
+
+        const DAY_FORMATTER = new Intl.DateTimeFormat('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+
+        // Persisted state
+        let userProfile = {
+            name: ''
+        };
+        let sessionHistory = [];
 
         // Game state
         let gameState = {
@@ -576,13 +709,20 @@
             feedbackStartTime: null,
             totalFeedbackTime: 0, // Total time spent showing feedback messages
             showRunningStats: false,
-            runningStatsInterval: null
+            runningStatsInterval: null,
+            sessionLogged: false
         };
 
         // Initialize
         function init() {
+            loadPersistedData();
             createTableSelector();
             setupKeyboardListeners();
+            updateProfileUI();
+            renderPersistentStats();
+            if (!userProfile.name) {
+                openNameModal(false);
+            }
         }
 
         // Create table selector buttons
@@ -686,6 +826,11 @@
 
         // Mode selection
         function selectMode(mode) {
+            if (!userProfile.name) {
+                openNameModal(false);
+                return;
+            }
+
             gameState.mode = mode;
             gameState.includeNegatives = document.getElementById('negativeCheckbox').checked;
             gameState.showRunningStats = document.getElementById('showRunningStatsCheckbox').checked;
@@ -774,7 +919,8 @@
                 feedbackStartTime: null,
                 totalFeedbackTime: 0,
                 showRunningStats: gameState.showRunningStats,
-                runningStatsInterval: null
+                runningStatsInterval: null,
+                sessionLogged: false
             };
             clearInput();
         }
@@ -1118,6 +1264,11 @@
             const totalTime = totalElapsedTime - (gameState.totalFeedbackTime / 1000); // Subtract feedback display time
             const avgTime = gameState.totalProblems > 0 ? (gameState.cumulativeAnswerTime / gameState.totalProblems).toFixed(1) : 0;
 
+            if (!gameState.sessionLogged && gameState.startTime) {
+                logSession(totalTime, Number(avgTime));
+                gameState.sessionLogged = true;
+            }
+
             const statsHTML = `
                 <div class="stat-row">
                     <span class="stat-label">Total Problems:</span>
@@ -1146,7 +1297,246 @@
             `;
 
             document.getElementById('statsDisplay').innerHTML = statsHTML;
+            document.getElementById('dailyBreakdownDisplay').innerHTML = getCurrentUserDailyStatsHTML();
+            renderPersistentStats();
             showScreen('resultsScreen');
+        }
+
+        function loadPersistedData() {
+            userProfile.name = localStorage.getItem(STORAGE_KEYS.userName) || '';
+
+            const storedSessions = localStorage.getItem(STORAGE_KEYS.sessions);
+            if (storedSessions) {
+                try {
+                    const parsed = JSON.parse(storedSessions);
+                    sessionHistory = Array.isArray(parsed) ? parsed : [];
+                } catch (error) {
+                    sessionHistory = [];
+                }
+            }
+        }
+
+        function updateProfileUI() {
+            const name = userProfile.name ? userProfile.name : 'Guest';
+            document.getElementById('profileName').textContent = `Learner: ${name}`;
+        }
+
+        function openNameModal(allowCancel) {
+            const modal = document.getElementById('nameModal');
+            const input = document.getElementById('nameInput');
+            const cancelBtn = document.getElementById('nameCancelBtn');
+            const title = modal.querySelector('.modal-header');
+            const helpText = modal.querySelector('.modal-body p');
+            document.getElementById('nameError').textContent = '';
+
+            input.value = userProfile.name || '';
+            cancelBtn.style.display = allowCancel && userProfile.name ? 'inline-block' : 'none';
+            title.textContent = userProfile.name ? 'Update your name' : 'Who is practicing?';
+            helpText.textContent = userProfile.name
+                ? 'Update your name. Your previous sessions remain saved on this device.'
+                : 'Enter your name so this device can keep your progress and time by user.';
+
+            modal.classList.add('active');
+            input.focus();
+            input.select();
+        }
+
+        function closeNameModal() {
+            if (!userProfile.name) return;
+            document.getElementById('nameModal').classList.remove('active');
+        }
+
+        function saveName() {
+            const input = document.getElementById('nameInput');
+            const errorEl = document.getElementById('nameError');
+            const rawName = input.value.trim();
+
+            if (!rawName) {
+                errorEl.textContent = 'Please enter a name.';
+                input.focus();
+                return;
+            }
+
+            userProfile.name = rawName;
+            localStorage.setItem(STORAGE_KEYS.userName, userProfile.name);
+            updateProfileUI();
+            renderPersistentStats();
+            document.getElementById('nameModal').classList.remove('active');
+        }
+
+        function formatSeconds(totalSeconds) {
+            const seconds = Math.max(0, Number(totalSeconds) || 0);
+            if (seconds < 60) {
+                return `${seconds.toFixed(1)}s`;
+            }
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = (seconds % 60).toFixed(1);
+            return `${minutes}m ${remainingSeconds}s`;
+        }
+
+        function getDateKey(isoTimestamp) {
+            const date = new Date(isoTimestamp);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function escapeHTML(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function saveSessionHistory() {
+            localStorage.setItem(STORAGE_KEYS.sessions, JSON.stringify(sessionHistory));
+        }
+
+        function logSession(totalTime, avgTime) {
+            const endedAt = new Date().toISOString();
+            const totalProblems = gameState.totalProblems;
+            const accuracy = totalProblems > 0 ? ((gameState.correctAnswers / totalProblems) * 100).toFixed(1) : '0.0';
+            const sessionRecord = {
+                id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                userName: userProfile.name || 'Guest',
+                mode: gameState.mode || 'unknown',
+                table: gameState.table,
+                range: gameState.range ? `${gameState.range.min}-${gameState.range.max}` : null,
+                totalProblems: totalProblems,
+                correctAnswers: gameState.correctAnswers,
+                wrongAnswers: gameState.wrongAnswers,
+                totalTimeSeconds: Number(totalTime.toFixed(1)),
+                averageSeconds: Number(avgTime),
+                accuracyPercent: Number(accuracy),
+                startedAt: gameState.startTime ? new Date(gameState.startTime).toISOString() : endedAt,
+                endedAt: endedAt,
+                day: getDateKey(endedAt)
+            };
+
+            sessionHistory.push(sessionRecord);
+            saveSessionHistory();
+        }
+
+        function getCurrentUserDailyStatsHTML() {
+            if (!userProfile.name) {
+                return '<h3>📅 Daily Aggregates</h3><div class="empty-stats">Set your name to view daily totals.</div>';
+            }
+
+            const currentUserSessions = sessionHistory.filter(s => s.userName === userProfile.name);
+            if (currentUserSessions.length === 0) {
+                return '<h3>📅 Daily Aggregates</h3><div class="empty-stats">No sessions yet for this user.</div>';
+            }
+
+            const dailyMap = {};
+            currentUserSessions.forEach(session => {
+                const day = session.day || getDateKey(session.endedAt);
+                if (!dailyMap[day]) {
+                    dailyMap[day] = { sessions: 0, timeSeconds: 0 };
+                }
+                dailyMap[day].sessions += 1;
+                dailyMap[day].timeSeconds += session.totalTimeSeconds || 0;
+            });
+
+            const sortedDays = Object.keys(dailyMap).sort((a, b) => b.localeCompare(a));
+            const rows = sortedDays.map(day => {
+                const entry = dailyMap[day];
+                return `
+                    <tr>
+                        <td>${DAY_FORMATTER.format(new Date(day))}</td>
+                        <td>${entry.sessions}</td>
+                        <td>${formatSeconds(entry.timeSeconds)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            return `
+                <h3>📅 Daily Aggregates (${escapeHTML(userProfile.name)})</h3>
+                <table class="aggregate-table">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Sessions</th>
+                            <th>Time Spent</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            `;
+        }
+
+        function renderPersistentStats() {
+            const container = document.getElementById('persistentStats');
+            if (!container) return;
+
+            if (!userProfile.name) {
+                container.innerHTML = '<div class="empty-stats">Enter a name to start tracking device stats.</div>';
+                return;
+            }
+
+            const currentUserSessions = sessionHistory.filter(s => s.userName === userProfile.name);
+            const userTotalTime = currentUserSessions.reduce((sum, s) => sum + (s.totalTimeSeconds || 0), 0);
+
+            const userAgg = {};
+            sessionHistory.forEach(session => {
+                const name = session.userName || 'Guest';
+                if (!userAgg[name]) {
+                    userAgg[name] = { sessions: 0, timeSeconds: 0 };
+                }
+                userAgg[name].sessions += 1;
+                userAgg[name].timeSeconds += session.totalTimeSeconds || 0;
+            });
+
+            const userRows = Object.keys(userAgg)
+                .sort((a, b) => userAgg[b].timeSeconds - userAgg[a].timeSeconds)
+                .map(name => `
+                    <tr>
+                        <td>${escapeHTML(name)}</td>
+                        <td>${userAgg[name].sessions}</td>
+                        <td>${formatSeconds(userAgg[name].timeSeconds)}</td>
+                    </tr>
+                `).join('');
+
+            const recentSessions = currentUserSessions
+                .slice()
+                .sort((a, b) => new Date(b.endedAt) - new Date(a.endedAt))
+                .slice(0, 5)
+                .map(s => `
+                    <tr>
+                        <td>${DAY_FORMATTER.format(new Date(s.endedAt))}</td>
+                        <td>${escapeHTML(s.mode)}</td>
+                        <td>${s.totalProblems}</td>
+                        <td>${formatSeconds(s.totalTimeSeconds)}</td>
+                    </tr>
+                `).join('');
+
+            container.innerHTML = `
+                <div class="stat-row">
+                    <span class="stat-label">${escapeHTML(userProfile.name)}'s Sessions:</span>
+                    <span class="stat-value">${currentUserSessions.length}</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">${escapeHTML(userProfile.name)}'s Total Time:</span>
+                    <span class="stat-value">${formatSeconds(userTotalTime)}</span>
+                </div>
+                ${userRows
+                    ? `<h3 style="margin-top: 16px;">⏱️ Time by User (Device)</h3>
+                       <table class="aggregate-table">
+                           <thead><tr><th>User</th><th>Sessions</th><th>Total Time</th></tr></thead>
+                           <tbody>${userRows}</tbody>
+                       </table>`
+                    : '<div class="empty-stats">No sessions recorded yet.</div>'}
+                ${currentUserSessions.length > 0
+                    ? `<h3 style="margin-top: 16px;">🕘 Recent Sessions (${escapeHTML(userProfile.name)})</h3>
+                       <table class="aggregate-table">
+                           <thead><tr><th>Date</th><th>Mode</th><th>Problems</th><th>Time</th></tr></thead>
+                           <tbody>${recentSessions}</tbody>
+                       </table>
+                       ${getCurrentUserDailyStatsHTML()}`
+                    : '<div class="empty-stats">Complete a session to see history and daily totals.</div>'}
+            `;
         }
 
         // Info modal functions
@@ -1162,6 +1552,19 @@
         document.getElementById('infoModal').addEventListener('click', function(e) {
             if (e.target === this) {
                 closeInfoModal();
+            }
+        });
+
+        document.getElementById('nameModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeNameModal();
+            }
+        });
+
+        document.getElementById('nameInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveName();
             }
         });
 
