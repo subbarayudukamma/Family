@@ -570,13 +570,19 @@
 
         <!-- Table Selection Screen -->
         <div id="tableScreen" class="screen">
-            <h1 id="tableTitle">Choose a Table</h1>
-            <h2 id="tablePrompt">Select a multiplication table (0-12)</h2>
+            <h1 id="tableTitle">Choose Tables</h1>
+            <h2 id="tablePrompt">Select multiplication tables (0-12)</h2>
             <div class="table-selector" id="tableSelector"></div>
-            <button class="mix-all-btn" id="mixAllBtn" onclick="selectTable('mix')">
-                🎲 Mix All Tables
-            </button>
+            <div style="margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 10px; font-size: 0.95em; color: #666;">
+                <p id="selectionHint">Select one or more tables to practice with</p>
+            </div>
             <div class="button-group" style="margin-top: 20px;">
+                <button id="startPracticeBtn" class="btn btn-primary" onclick="startPractice()" style="display: none;">
+                    ▶ Start Practice
+                </button>
+                <button class="mix-all-btn" id="mixAllBtn" onclick="startPracticeWithMix()" style="margin-bottom: 10px;">
+                    🎲 Mix All Tables/Ranges
+                </button>
                 <button class="btn btn-secondary" onclick="goHome()">
                     ← Back to Home
                 </button>
@@ -661,7 +667,7 @@
                 <div id="nameError" class="name-error"></div>
                 <div class="name-actions">
                     <button id="nameCancelBtn" class="btn btn-secondary" style="padding: 10px 14px; font-size: 0.9em;" onclick="closeNameModal()">Cancel</button>
-                    <button class="btn btn-primary" style="padding: 10px 14px; font-size: 0.9em;" onclick="saveName()">Save</button>
+                    <button id="nameSaveBtn" class="btn btn-primary" style="padding: 10px 14px; font-size: 0.9em;">Save</button>
                 </div>
             </div>
         </div>
@@ -692,8 +698,8 @@
         // Game state
         let gameState = {
             mode: null, // 'multiplication', 'division', 'addition', or 'subtraction'
-            table: null,
-            range: null, // For addition/subtraction: { min, max }
+            tables: [], // For multiplication/division: array of selected tables
+            ranges: [], // For addition/subtraction: array of selected ranges
             includeNegatives: false,
             currentQuestion: null,
             previousQuestion: null,
@@ -725,7 +731,7 @@
             }
         }
 
-        // Create table selector buttons
+        // Create table selector buttons (multi-select)
         function createTableSelector() {
             const selector = document.getElementById('tableSelector');
             selector.innerHTML = ''; // Clear previous content
@@ -734,7 +740,8 @@
                 const btn = document.createElement('button');
                 btn.className = 'table-btn';
                 btn.textContent = i;
-                btn.onclick = () => selectTable(i);
+                btn.dataset.table = i;
+                btn.onclick = () => toggleTableSelection(i, btn);
                 selector.appendChild(btn);
             }
         }
@@ -771,8 +778,8 @@
         function retrySession() {
             // Save current session settings
             const mode = gameState.mode;
-            const table = gameState.table;
-            const range = gameState.range;
+            const tables = gameState.tables;
+            const ranges = gameState.ranges;
             const includeNegatives = gameState.includeNegatives;
             
             // Reset game state
@@ -780,14 +787,28 @@
             
             // Restore session settings
             gameState.mode = mode;
-            gameState.table = table;
-            gameState.range = range;
+            gameState.tables = tables;
+            gameState.ranges = ranges;
             gameState.includeNegatives = includeNegatives;
             gameState.startTime = Date.now();
             
             // Start practice
             showScreen('practiceScreen');
             generateQuestion();
+        }
+
+        function startPracticeWithMix() {
+            // Select all available tables/ranges for mix
+            if (gameState.mode === 'multiplication' || gameState.mode === 'division') {
+                gameState.tables = Array.from({length: MAX_TABLE_NUMBER + 1}, (_, i) => i);
+            } else if (gameState.mode === 'addition' || gameState.mode === 'subtraction') {
+                gameState.ranges = [
+                    { label: '0 - 10', min: 0, max: 10 },
+                    { label: '10 - 100', min: 10, max: 100 },
+                    { label: '100+', min: 100, max: 999 }
+                ];
+            }
+            startPractice();
         }
 
         function goHome() {
@@ -805,7 +826,7 @@
             }
         }
 
-        // Create range selector for addition/subtraction
+        // Create range selector for addition/subtraction (multi-select)
         function createRangeSelector() {
             const selector = document.getElementById('tableSelector');
             selector.innerHTML = '';
@@ -819,9 +840,55 @@
                 btn.className = 'table-btn';
                 btn.style.gridColumn = 'span 1';
                 btn.textContent = range.label;
-                btn.onclick = () => selectRange(range);
+                btn.dataset.rangeIndex = index;
+                btn.onclick = () => toggleRangeSelection(range, index, btn);
                 selector.appendChild(btn);
             });
+        }
+
+        // Toggle table selection
+        function toggleTableSelection(table, btn) {
+            const index = gameState.tables.indexOf(table);
+            if (index > -1) {
+                gameState.tables.splice(index, 1);
+                btn.style.background = 'white';
+                btn.style.color = '#667eea';
+            } else {
+                gameState.tables.push(table);
+                btn.style.background = '#667eea';
+                btn.style.color = 'white';
+            }
+            updateSelectionHint();
+        }
+
+        // Toggle range selection
+        function toggleRangeSelection(range, index, btn) {
+            const existingIndex = gameState.ranges.findIndex(r => r.min === range.min && r.max === range.max);
+            if (existingIndex > -1) {
+                gameState.ranges.splice(existingIndex, 1);
+                btn.style.background = 'white';
+                btn.style.color = '#667eea';
+            } else {
+                gameState.ranges.push(range);
+                btn.style.background = '#667eea';
+                btn.style.color = 'white';
+            }
+            updateSelectionHint();
+        }
+
+        // Update selection hint
+        function updateSelectionHint() {
+            const hint = document.getElementById('selectionHint');
+            if (gameState.mode === 'multiplication' || gameState.mode === 'division') {
+                hint.textContent = gameState.tables.length === 0 
+                    ? 'Select one or more tables to practice with' 
+                    : `Selected: Tables ${gameState.tables.join(', ')}`;
+            } else if (gameState.mode === 'addition' || gameState.mode === 'subtraction') {
+                const rangeLabels = gameState.ranges.map(r => `${r.min}-${r.max}`).join(', ');
+                hint.textContent = gameState.ranges.length === 0 
+                    ? 'Select one or more ranges to practice with' 
+                    : `Selected: ${rangeLabels}`;
+            }
         }
 
         // Mode selection
@@ -832,6 +899,8 @@
             }
 
             gameState.mode = mode;
+            gameState.tables = [];
+            gameState.ranges = [];
             gameState.includeNegatives = document.getElementById('negativeCheckbox').checked;
             gameState.showRunningStats = document.getElementById('showRunningStatsCheckbox').checked;
             
@@ -851,47 +920,44 @@
             const mixAllBtn = document.getElementById('mixAllBtn');
             
             if (mode === 'multiplication') {
-                title.textContent = 'Choose a Table';
-                prompt.textContent = `Select a multiplication table (0-${MAX_TABLE_NUMBER})`;
+                title.textContent = 'Choose Tables';
+                prompt.textContent = `Select multiplication tables (0-${MAX_TABLE_NUMBER})`;
                 createTableSelector();
                 mixAllBtn.style.display = 'block';
             } else if (mode === 'division') {
-                title.textContent = 'Choose a Table';
-                prompt.textContent = `Select a division table (0-${MAX_TABLE_NUMBER})`;
+                title.textContent = 'Choose Tables';
+                prompt.textContent = `Select division tables (0-${MAX_TABLE_NUMBER})`;
                 createTableSelector();
                 mixAllBtn.style.display = 'block';
             } else if (mode === 'addition') {
-                title.textContent = 'Choose a Difficulty';
-                prompt.textContent = 'Select a range for addition';
+                title.textContent = 'Choose Ranges';
+                prompt.textContent = 'Select ranges for addition';
                 createRangeSelector();
                 mixAllBtn.style.display = 'none';
             } else if (mode === 'subtraction') {
-                title.textContent = 'Choose a Difficulty';
-                prompt.textContent = 'Select a range for subtraction';
+                title.textContent = 'Choose Ranges';
+                prompt.textContent = 'Select ranges for subtraction';
                 createRangeSelector();
                 mixAllBtn.style.display = 'none';
             }
             showScreen('tableScreen');
         }
 
-        // Table selection
-        function selectTable(table) {
-            gameState.table = table;
+        // Start practice with selected tables/ranges
+        function startPractice() {
+            if (gameState.mode === 'multiplication' || gameState.mode === 'division') {
+                if (gameState.tables.length === 0) {
+                    alert('Please select at least one table');
+                    return;
+                }
+            } else if (gameState.mode === 'addition' || gameState.mode === 'subtraction') {
+                if (gameState.ranges.length === 0) {
+                    alert('Please select at least one range');
+                    return;
+                }
+            }
+            
             resetGameState();
-            gameState.table = table;
-            gameState.mode = gameState.mode || 'multiplication';
-            gameState.startTime = Date.now();
-            showScreen('practiceScreen');
-            startRunningStats();
-            generateQuestion();
-        }
-
-        // Range selection for addition/subtraction
-        function selectRange(range) {
-            gameState.range = range;
-            resetGameState();
-            gameState.range = range;
-            gameState.mode = gameState.mode;
             gameState.startTime = Date.now();
             showScreen('practiceScreen');
             startRunningStats();
@@ -902,8 +968,8 @@
         function resetGameState() {
             gameState = {
                 mode: gameState.mode,
-                table: gameState.table,
-                range: gameState.range,
+                tables: gameState.tables,
+                ranges: gameState.ranges,
                 includeNegatives: gameState.includeNegatives,
                 currentQuestion: null,
                 previousQuestion: null,
@@ -1029,12 +1095,8 @@
                     num2 = wrongQ.num2;
                 } else {
                     num2 = Math.floor(Math.random() * (MAX_TABLE_NUMBER + 1)); // 0-MAX_TABLE_NUMBER
-                    // If mix mode, randomly select a table number for num1
-                    if (gameState.table === 'mix') {
-                        num1 = Math.floor(Math.random() * (MAX_TABLE_NUMBER + 1)); // 0-MAX_TABLE_NUMBER
-                    } else {
-                        num1 = gameState.table;
-                    }
+                    // Randomly select from selected tables
+                    num1 = gameState.tables[Math.floor(Math.random() * gameState.tables.length)];
                 }
 
                 // Apply negatives for multiplication/division
@@ -1065,8 +1127,9 @@
                     questionText = `${product} ÷ ${num1} = ?`;
                 }
             } else if (gameState.mode === 'addition' || gameState.mode === 'subtraction') {
-                // Generate numbers within the selected range
-                const { min, max } = gameState.range;
+                // Generate numbers within a randomly selected range
+                const range = gameState.ranges[Math.floor(Math.random() * gameState.ranges.length)];
+                const { min, max } = range;
                 
                 // Retry wrong questions 30% of the time if available
                 if (gameState.wrongQuestions.length > 0 && Math.random() < 0.3) {
@@ -1399,12 +1462,23 @@
             const endedAt = new Date().toISOString();
             const totalProblems = gameState.totalProblems;
             const accuracy = totalProblems > 0 ? ((gameState.correctAnswers / totalProblems) * 100).toFixed(1) : '0.0';
+            
+            let tableStr = null;
+            let rangeStr = null;
+            
+            if (gameState.tables && gameState.tables.length > 0) {
+                tableStr = gameState.tables.join(',');
+            }
+            if (gameState.ranges && gameState.ranges.length > 0) {
+                rangeStr = gameState.ranges.map(r => `${r.min}-${r.max}`).join(';');
+            }
+            
             const sessionRecord = {
                 id: `${Date.now()}-${Math.floor(Math.random() * 1000)}`,
                 userName: userProfile.name || 'Guest',
                 mode: gameState.mode || 'unknown',
-                table: gameState.table,
-                range: gameState.range ? `${gameState.range.min}-${gameState.range.max}` : null,
+                tables: tableStr,
+                ranges: rangeStr,
                 totalProblems: totalProblems,
                 correctAnswers: gameState.correctAnswers,
                 wrongAnswers: gameState.wrongAnswers,
@@ -1561,10 +1635,35 @@
             }
         });
 
-        document.getElementById('nameInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveName();
+        // Attach event listeners safely
+        const nameInputEl = document.getElementById('nameInput');
+        const nameSaveBtn = document.getElementById('nameSaveBtn');
+        const startPracticeBtn = document.getElementById('startPracticeBtn');
+        
+        if (nameInputEl) {
+            nameInputEl.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveName();
+                }
+            });
+        }
+        
+        if (nameSaveBtn) {
+            nameSaveBtn.addEventListener('click', saveName);
+        }
+        
+        if (startPracticeBtn) {
+            startPracticeBtn.addEventListener('click', startPractice);
+        }
+        
+        // Show/hide start button based on selection
+        document.addEventListener('click', function(e) {
+            if (e.target.classList && (e.target.classList.contains('table-btn'))) {
+                const btn = document.getElementById('startPracticeBtn');
+                if (btn && (gameState.tables.length > 0 || gameState.ranges.length > 0)) {
+                    btn.style.display = 'block';
+                }
             }
         });
 
